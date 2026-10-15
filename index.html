@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' app:; script-src 'self' app:; style-src 'self' 'unsafe-inline' app:; img-src 'self' data: blob: app:; media-src 'self' blob: app:; connect-src 'self' app: blob: data:" />
+    <title>FPS Zombie Shooter</title>
+    <meta name="description" content="A first-person 3D zombie survival shooter: hold a ruined city plaza at night against waves of walkers, runners and brutes." />
+    <meta name="theme-color" content="#0b0e13" />
+    <meta property="og:title" content="FPS Zombie Shooter" />
+    <meta property="og:description" content="Hold a ruined city plaza at night against waves of zombies. Plays in your browser." />
+    <meta property="og:image" content="./preview.jpg" />
+    <link rel="icon" type="image/png" href="./icon.png" />
+    <script type="module" crossorigin src="./assets/index-BicAdm28.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Dff8TnnE.css">
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <!-- In-game HUD -->
+    <div id="hud" class="hidden" aria-hidden="true">
+      <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><b class="dot"></b></div>
+      <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+      <div id="damage-dir"></div>
+      <div id="top-left">
+        <div class="wave-label">Wave <span id="hud-wave">0</span></div>
+        <div class="sub"><span id="hud-alive">0</span> zombies left</div>
+      </div>
+      <div id="top-right">
+        <div class="score" id="hud-score">0</div>
+        <div class="sub"><span id="hud-kills">0</span> kills</div>
+        <div id="killfeed"></div>
+      </div>
+      <div id="bottom-left">
+        <div class="health-row">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z" /></svg>
+          <div class="bar"><div id="hud-health-fill"></div></div>
+          <span id="hud-health">100</span>
+        </div>
+      </div>
+      <div id="bottom-right">
+        <div class="weapon-name" id="hud-weapon">Assault Rifle</div>
+        <div class="ammo"><span id="hud-ammo">30</span><span class="reserve">/ <span id="hud-reserve">210</span></span></div>
+        <div class="reload" id="hud-reload">Reloading…</div>
+      </div>
+      <div id="banner"><div class="title"></div><div class="sub"></div></div>
+      <div id="countdown"></div>
+      <div id="toasts"></div>
+    </div>
+    <div id="fps" class="hidden"></div>
+
+    <!-- Screens -->
+    <div id="loading" class="screen">
+      <div class="logo">FPS Zombie Shooter</div>
+      <div class="progress"><div id="load-fill"></div></div>
+      <div class="hint" id="load-text">Loading the city…</div>
+    </div>
+
+    <div id="touch-notice" class="screen hidden">
+      <div class="panel center">
+        <div class="logo">FPS Zombie Shooter</div>
+        <img class="preview" src="./preview.jpg" alt="Gameplay: zombies coming down a lamp-lit street at night" loading="lazy" />
+        <p class="sub">This game needs a keyboard and mouse. Open this page on a laptop or desktop computer to play.</p>
+        <div class="menu"><button data-action="touch-anyway">Load it anyway</button></div>
+      </div>
+    </div>
+
+    <div id="title" class="screen hidden">
+      <div class="panel left">
+        <div class="logo">FPS Zombie Shooter</div>
+        <div class="tagline">One night. One city. Hold the plaza.</div>
+        <div class="menu">
+          <button data-action="play" class="primary">Play</button>
+          <button data-action="controls">How to play</button>
+          <button data-action="settings">Settings <kbd>⌘,</kbd></button>
+          <button data-action="quit" class="electron-only">Quit</button>
+        </div>
+        <div class="best" id="best-score"></div>
+        <div class="downloads hidden" id="downloads">
+          <div class="downloads-label">Get the Mac app</div>
+          <div class="downloads-row">
+            <a class="download" id="dl-arm" href="#" download><span>Apple silicon</span><small>M1 and later</small></a>
+            <a class="download" id="dl-intel" href="#" download><span>Intel</span><small>older Macs</small></a>
+          </div>
+          <a class="downloads-all" id="dl-all" href="#" target="_blank" rel="noopener">All downloads and release notes</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause" class="screen hidden dim">
+      <div class="panel center">
+        <div class="heading">Paused</div>
+        <div class="sub" id="pause-hint"></div>
+        <div class="menu">
+          <button data-action="resume" class="primary">Resume</button>
+          <button data-action="controls">How to play</button>
+          <button data-action="settings">Settings <kbd>⌘,</kbd></button>
+          <button data-action="quit-to-title">Quit to title</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gameover" class="screen hidden dim red">
+      <div class="panel center">
+        <div class="heading">You died</div>
+        <div class="sub" id="go-sub"></div>
+        <div class="stats" id="go-stats"></div>
+        <div class="menu row">
+          <button data-action="play" class="primary">Play again</button>
+          <button data-action="quit-to-title">Title screen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls" class="modal hidden" role="dialog" aria-labelledby="controls-h">
+      <div class="card">
+        <div class="card-head"><h2 id="controls-h">How to play</h2><button class="close" data-close>×</button></div>
+        <p>Zombies pour in from the roads at the edge of the city. Survive as many waves as you can. Headshots do extra damage. Fallen zombies sometimes drop ammo or health.</p>
+        <table class="keys">
+          <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Move</td></tr>
+          <tr><td><kbd>Mouse</kbd></td><td>Look</td></tr>
+          <tr><td><kbd>Left click</kbd></td><td>Shoot</td></tr>
+          <tr><td><kbd>Right click</kbd></td><td>Aim down sights</td></tr>
+          <tr><td><kbd>Shift</kbd></td><td>Sprint</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Jump</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Reload</td></tr>
+          <tr><td><kbd>1</kbd> <kbd>2</kbd> / <kbd>Q</kbd> / <kbd>Wheel</kbd></td><td>Rifle / shotgun / swap</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Pause</td></tr>
+          <tr><td><kbd>⌘,</kbd></td><td>Settings</td></tr>
+        </table>
+        <div class="legend">
+          <span class="tag walker">Walker</span> slow, steady
+          <span class="tag runner">Runner</span> fast, fragile
+          <span class="tag brute">Brute</span> slow, hits hard, soaks bullets
+        </div>
+      </div>
+    </div>
+
+    <div id="settings" class="modal hidden" role="dialog" aria-labelledby="settings-h">
+      <div class="card">
+        <div class="card-head"><h2 id="settings-h">Settings</h2><button class="close" data-close>×</button></div>
+        <form id="settings-form">
+          <fieldset>
+            <legend>Controls</legend>
+            <label>Mouse sensitivity <output data-for="mouseSensitivity"></output><input type="range" name="mouseSensitivity" min="0.2" max="3" step="0.05" /></label>
+            <label>Field of view <output data-for="fov"></output><input type="range" name="fov" min="60" max="100" step="1" /></label>
+            <label class="check"><input type="checkbox" name="invertY" /> Invert mouse Y</label>
+          </fieldset>
+          <fieldset>
+            <legend>Audio</legend>
+            <label>Master volume <output data-for="masterVolume"></output><input type="range" name="masterVolume" min="0" max="1" step="0.01" /></label>
+            <label>Effects <output data-for="effectsVolume"></output><input type="range" name="effectsVolume" min="0" max="1" step="0.01" /></label>
+            <label>Ambience <output data-for="ambienceVolume"></output><input type="range" name="ambienceVolume" min="0" max="1" step="0.01" /></label>
+          </fieldset>
+          <fieldset>
+            <legend>Graphics</legend>
+            <label>Quality
+              <select name="quality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+            </label>
+            <label>Render scale <output data-for="renderScale"></output><input type="range" name="renderScale" min="0.5" max="1" step="0.05" /></label>
+            <label class="check"><input type="checkbox" name="autoResolution" /> Auto-adjust resolution to keep it smooth</label>
+            <label class="check"><input type="checkbox" name="showFps" /> Show frame rate</label>
+          </fieldset>
+          <fieldset>
+            <legend>Gameplay</legend>
+            <label>Difficulty
+              <select name="difficulty"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select>
+            </label>
+            <p class="note">Difficulty applies from the next game.</p>
+          </fieldset>
+          <div class="actions"><button type="button" id="settings-reset">Reset to defaults</button><button type="button" class="primary" data-close>Done</button></div>
+        </form>
+      </div>
+    </div>
+
+    <button id="feedback-tab" class="hidden" aria-label="Send feedback">Feedback</button>
+    <div id="feedback" class="modal hidden" role="dialog" aria-labelledby="feedback-h">
+      <div class="card narrow">
+        <div class="card-head"><h2 id="feedback-h">Feedback</h2><button class="close" data-close>×</button></div>
+        <form id="feedback-form">
+          <div class="seg" role="radiogroup">
+            <label><input type="radio" name="kind" value="bug" checked /> Bug</label>
+            <label><input type="radio" name="kind" value="idea" /> Idea</label>
+            <label><input type="radio" name="kind" value="other" /> Other</label>
+          </div>
+          <textarea name="text" rows="5" placeholder="What happened, or what would make it better?" required></textarea>
+          <div class="actions"><span id="feedback-status" class="note"></span><button type="submit" class="primary">Save feedback</button></div>
+        </form>
+      </div>
+    </div>
+
+  </body>
+</html>
